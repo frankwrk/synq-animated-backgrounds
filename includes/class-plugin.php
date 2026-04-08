@@ -58,6 +58,16 @@ class SYNQ_Animated_Backgrounds_Plugin {
             [ $this, 'maybe_enqueue_assets_from_document' ],
             20
         );
+
+        add_action(
+            'elementor/preview/enqueue_scripts',
+            [ $this, 'enqueue_assets_for_editor_preview' ]
+        );
+
+        add_action(
+            'elementor/editor/after_enqueue_scripts',
+            [ $this, 'enqueue_assets_for_editor_preview' ]
+        );
     }
 
     /**
@@ -162,6 +172,19 @@ class SYNQ_Animated_Backgrounds_Plugin {
         $this->enqueue_core_assets();
 
         foreach ( $provider_types as $provider_type ) {
+            $this->enqueue_provider_assets( $provider_type );
+        }
+    }
+
+    /**
+     * In Elementor edit mode, preload core + all providers so live control
+     * changes can preview instantly even before first save.
+     */
+    public function enqueue_assets_for_editor_preview(): void {
+        $this->register_core_assets();
+        $this->enqueue_core_assets();
+
+        foreach ( array_keys( $this->providers ) as $provider_type ) {
             $this->enqueue_provider_assets( $provider_type );
         }
     }

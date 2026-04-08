@@ -28,6 +28,7 @@ Use this matrix before releasing provider changes.
 | T10 | Runtime | Scroll container far out of view | Animation instance is destroyed |
 | T11 | Runtime | Browser tab hidden then shown | Active instances destroy on hide and re-init on show |
 | T12 | Editor | Change control values in Elementor editor | Re-render updates animation without duplicate instances |
+| T12b | Editor | Page initially has no animated containers; enable animation in editor | Animation scripts are already available and preview initializes immediately |
 | T13 | Mobile policy | Disable on Mobile = Yes on viewport <= 767px | Animation does not initialize |
 | T14 | Reduced motion | `prefers-reduced-motion: reduce` enabled | Provider receives reduced-motion behavior |
 | T15 | Layering | Complex container content (buttons, overlays, z-index) | Canvas remains behind content and does not block interaction |

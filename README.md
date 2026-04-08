@@ -68,6 +68,7 @@ Responsibilities:
 - Injects Elementor controls into Container layout tab.
 - Detects animation usage from `_elementor_data` and pre-enqueues only required providers.
 - Adds render-time fallback enqueue for dynamic Elementor contexts.
+- Preloads core + provider scripts in Elementor editor/preview so animation and color changes render live before publish.
 - Sanitizes and clamps shared config values before writing to HTML.
 
 ### Provider Contract
@@ -199,6 +200,10 @@ File: `assets/js/provider-vanta-trunk.js`
    - Ensures assets still load in dynamic contexts (theme builder/templates) where pre-detection may miss.
 
 This replaces the old “enqueue all providers on all Elementor pages” behavior.
+
+Editor-specific behavior:
+
+- In Elementor edit mode (`elementor/preview/enqueue_scripts`, `elementor/editor/after_enqueue_scripts`), core and all registered provider scripts are preloaded to support immediate in-editor preview when enabling animation or switching provider/colors.
 
 ## GitHub Release Updates
 
