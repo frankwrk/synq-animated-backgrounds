@@ -65,8 +65,10 @@ class SYNQ_Animated_Backgrounds_Plugin {
      */
     protected function register_providers(): void {
         $vanta_topology = new SYNQ_Bg_Provider_Vanta_Topology();
+        $vanta_trunk    = new SYNQ_Bg_Provider_Vanta_Trunk();
 
         $this->providers[ $vanta_topology->get_type() ] = $vanta_topology;
+        $this->providers[ $vanta_trunk->get_type() ]    = $vanta_trunk;
     }
 
     /**

@@ -2,8 +2,8 @@
 
 /**
  * Plugin Name:       SYNQ Animated Backgrounds for Elementor
- * Description:       Generic animated backgrounds for Elementor Containers (v0.2 ships with Vanta Topology hardening improvements).
- * Version:           0.2.0
+ * Description:       Generic animated backgrounds for Elementor Containers (v0.3 ships with Vanta Topology + Trunk).
+ * Version:           0.3.0
  * Author:            SYNQ Group
  * Text Domain:       synq-animated-backgrounds
  * Requires at least: 6.6
@@ -18,7 +18,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('SYNQ_AB_PLUGIN_VERSION', '0.2.0');
+define('SYNQ_AB_PLUGIN_VERSION', '0.3.0');
 define('SYNQ_AB_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('SYNQ_AB_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('SYNQ_AB_MIN_WP_VERSION', '6.6');
@@ -104,6 +104,7 @@ add_action('plugins_loaded', function () {
 
     require_once SYNQ_AB_PLUGIN_PATH . 'includes/class-provider-interface.php';
     require_once SYNQ_AB_PLUGIN_PATH . 'includes/providers/class-provider-vanta-topology.php';
+    require_once SYNQ_AB_PLUGIN_PATH . 'includes/providers/class-provider-vanta-trunk.php';
     require_once SYNQ_AB_PLUGIN_PATH . 'includes/class-plugin.php';
 
     add_action('init', function () {

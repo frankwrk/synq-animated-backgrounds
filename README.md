@@ -2,8 +2,8 @@
 
 A WordPress plugin that adds animated background controls to **Elementor Container** widgets.
 
-Current version: `0.2.0`
-Bundled provider: **Vanta Topology**
+Current version: `0.3.0`
+Bundled providers: **Vanta Topology** and **Vanta Trunk**
 
 ## Overview
 
@@ -78,6 +78,20 @@ Responsibilities:
 - Exposes a filter for URL overrides:
   - `synq_ab_vanta_topology_script_urls`
 
+### Vanta Trunk Provider
+
+File: `includes/providers/class-provider-vanta-trunk.php`
+
+Responsibilities:
+
+- Adds provider-specific controls.
+- Sanitizes colors (`sanitize_hex_color`) and clamps numeric ranges server-side.
+- Registers/enqueues pinned dependency versions:
+  - `p5.js 1.1.9`
+  - `vanta.trunk 0.5.24`
+- Exposes a filter for URL overrides:
+  - `synq_ab_vanta_trunk_script_urls`
+
 ## Elementor Controls
 
 Section: **Background Animation** (Container > Layout)
@@ -97,6 +111,14 @@ Vanta Topology controls:
 - `Scale` (clamped `0.5` to `2.0`)
 - `Points (Density)` (clamped `5` to `20`)
 - `Spacing` (clamped `5` to `50`)
+
+Vanta Trunk controls:
+
+- `Stroke Color`
+- `Background Color`
+- `Scale` (clamped `0.5` to `2.0`)
+- `Spacing` (clamped `0` to `30`)
+- `Chaos` (clamped `0` to `2`)
 
 ## Frontend Lifecycle
 
@@ -130,6 +152,17 @@ File: `assets/js/provider-vanta-topology.js`
 
 - Uses the registration handshake (`SYNQBgAnimRegisterProvider`) when available.
 - Mounts Vanta to explicit layer (`config.layer`) instead of the raw wrapper.
+- Applies reduced-motion behavior by disabling mouse/touch controls when `motionReduced` is set.
+
+File: `assets/js/provider-vanta-trunk.js`
+
+- Uses the same registration handshake and lifecycle contract.
+- Maps Elementor settings to `VANTA.TRUNK(...)` options:
+  - `color`
+  - `backgroundColor`
+  - `scale`
+  - `spacing`
+  - `chaos`
 - Applies reduced-motion behavior by disabling mouse/touch controls when `motionReduced` is set.
 
 ## Asset Loading Strategy
@@ -172,13 +205,22 @@ The following improvements were implemented for stability/performance before add
 8. Replaced blanket stacking approach with explicit animation background layer.
 9. Added test matrix documentation for regression-safe provider expansion.
 
+## Feature Addition in v0.3.0
+
+1. Added a second provider: `Vanta – Trunk`.
+2. Added provider-specific Elementor controls for Trunk.
+3. Added Trunk runtime adapter and conditional loading integration.
+4. Added filterable URL map for Trunk script dependencies.
+
 ## File Map
 
 - `synq-animated-backgrounds.php` — bootstrap, compatibility checks, notices.
 - `includes/class-plugin.php` — controls, config serialization, conditional asset loading.
 - `includes/class-provider-interface.php` — provider contract.
 - `includes/providers/class-provider-vanta-topology.php` — Vanta provider implementation.
+- `includes/providers/class-provider-vanta-trunk.php` — Vanta Trunk provider implementation.
 - `assets/js/core.js` — provider registry + lifecycle runtime.
 - `assets/js/provider-vanta-topology.js` — Vanta provider JS adapter.
+- `assets/js/provider-vanta-trunk.js` — Vanta Trunk provider JS adapter.
 - `assets/css/frontend.css` — explicit layer-based stacking.
 - `docs/test-matrix.md` — QA scenarios and expected outcomes.

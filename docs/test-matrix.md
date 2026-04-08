@@ -21,6 +21,7 @@ Use this matrix before releasing provider changes.
 | T6 | Sanitization | Out-of-range numeric values in Elementor data | Values are clamped to configured min/max |
 | T7 | Loading | Page with no animated containers | Provider scripts are not enqueued |
 | T8 | Loading | Page with Vanta animated container | Core + Vanta scripts are enqueued |
+| T8b | Loading | Page with Trunk animated container | Core + Trunk scripts are enqueued |
 | T9 | Runtime | Scroll animated container into view | Animation initializes when intersecting |
 | T10 | Runtime | Scroll container far out of view | Animation instance is destroyed |
 | T11 | Runtime | Browser tab hidden then shown | Active instances destroy on hide and re-init on show |
@@ -41,6 +42,7 @@ Use this matrix before releasing provider changes.
 4. In Elementor editor, modify controls and confirm instance cleanup/re-init works.
 5. Test on desktop and mobile viewport widths.
 6. Enable `prefers-reduced-motion` and re-check runtime behavior.
+7. Repeat the same checks for both `Vanta – Topology` and `Vanta – Trunk` provider types.
 
 ## Local Code Checks
 
