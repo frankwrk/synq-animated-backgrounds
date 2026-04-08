@@ -2,7 +2,7 @@
 
 A WordPress plugin that adds animated background controls to **Elementor Container** widgets.
 
-Current version: `0.3.0`
+Current version: `0.3.2`
 Bundled providers: **Vanta Topology** and **Vanta Trunk**
 
 ## Overview
@@ -15,17 +15,23 @@ At runtime, the plugin:
 2. Serializes sanitized config into container `data-*` attributes.
 3. Loads only required frontend assets (core + used providers).
 4. Initializes/destroys animation instances with lifecycle-aware JS logic.
+5. Checks GitHub Releases for plugin updates (outside WordPress.org).
 
 ## Compatibility Requirements
 
 Plugin header requirements:
 
-- WordPress `>= 6.6`
-- PHP `>= 7.4`
-- Elementor `>= 4.0.0`
+- WordPress `>= 6.4`
+- PHP `>= 7.2`
+- Elementor `>= 3.24.0`
 - Tested up to WordPress `6.9.4`
 
 If requirements are not met, the plugin does not bootstrap and shows an **admin notice** with exact compatibility errors.
+
+Compatibility policy details:
+
+- Minimum supported versions are intentionally set a few releases behind current latest stable to reduce avoidable install friction on maintained production sites.
+- Elementor prerelease tags (for example `4.0.0-dev4`, `4.0.0-beta1`, `4.0.0-rc1`) are normalized to their numeric base (`4.0.0`) before minimum version comparison. This prevents false negatives when a prerelease already satisfies the required base version.
 
 ## Architecture
 
@@ -35,9 +41,22 @@ File: `synq-animated-backgrounds.php`
 
 - Declares plugin metadata and version constants.
 - Validates compatibility (WordPress, PHP, Elementor).
+- Declares custom `Update URI` for GitHub-based updates.
 - Shows admin notices when incompatible.
 - Loads plugin classes only after requirements pass.
 - Loads translations via `load_plugin_textdomain()`.
+
+### GitHub Updater
+
+File: `includes/class-github-updater.php`
+
+Responsibilities:
+
+- Integrates with WordPress core update checks via `pre_set_site_transient_update_plugins`.
+- Fetches latest GitHub release metadata with transient caching.
+- Provides plugin details data for the update modal (`plugins_api`).
+- Supports optional private-repo auth via `synq_ab_github_token` filter.
+- Normalizes GitHub source ZIP extraction paths to the plugin directory and aborts update safely if folder mapping fails.
 
 ### Core Plugin Orchestrator
 
@@ -181,6 +200,26 @@ File: `assets/js/provider-vanta-trunk.js`
 
 This replaces the old “enqueue all providers on all Elementor pages” behavior.
 
+## GitHub Release Updates
+
+This plugin can self-update from GitHub Releases (no WordPress.org listing required).
+
+Current default repository:
+
+- `frankwrk/synq-animated-backgrounds`
+
+Optional filters:
+
+- `synq_ab_github_repository` — override `owner/repo`.
+- `synq_ab_github_token` — set a token for private repos.
+- `synq_ab_github_cache_ttl` — override release metadata cache TTL (seconds, min 300).
+
+Release recommendations:
+
+1. Publish a GitHub Release with a semver tag (for example `v0.3.2`).
+2. Prefer uploading a release asset zip named `synq-animated-backgrounds.zip` with plugin files at the zip root.
+3. If only source zipball is present, updater will attempt directory normalization automatically.
+
 ## Extension Guide (Adding Providers)
 
 1. Add provider class in `includes/providers/` implementing `SYNQ_Bg_Provider_Interface`.
@@ -212,9 +251,25 @@ The following improvements were implemented for stability/performance before add
 3. Added Trunk runtime adapter and conditional loading integration.
 4. Added filterable URL map for Trunk script dependencies.
 
+## Compatibility Fix in v0.3.1
+
+1. Lowered minimum environment requirements to older supported baselines:
+   - WordPress: `6.6` → `6.4`
+   - PHP: `7.4` → `7.2`
+   - Elementor: `4.0.0` → `3.24.0`
+2. Fixed Elementor version checks to treat prerelease builds like `4.0.0-dev4` as `4.0.0` for minimum compatibility gating.
+
+## GitHub Update Integration in v0.3.2
+
+1. Added WordPress core updater integration for GitHub Releases.
+2. Added custom plugin metadata `Update URI` for non-WordPress.org updates.
+3. Added safe source-directory normalization during update install to avoid folder mismatch breakage.
+4. Added optional private-repo auth support via filter.
+
 ## File Map
 
 - `synq-animated-backgrounds.php` — bootstrap, compatibility checks, notices.
+- `includes/class-github-updater.php` — GitHub release update integration.
 - `includes/class-plugin.php` — controls, config serialization, conditional asset loading.
 - `includes/class-provider-interface.php` — provider contract.
 - `includes/providers/class-provider-vanta-topology.php` — Vanta provider implementation.

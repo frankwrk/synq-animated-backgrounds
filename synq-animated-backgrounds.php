@@ -3,13 +3,14 @@
 /**
  * Plugin Name:       SYNQ Animated Backgrounds for Elementor
  * Description:       Generic animated backgrounds for Elementor Containers (v0.3 ships with Vanta Topology + Trunk).
- * Version:           0.3.0
+ * Version:           0.3.2
  * Author:            SYNQ Group
  * Text Domain:       synq-animated-backgrounds
- * Requires at least: 6.6
- * Requires PHP:      7.4
+ * Requires at least: 6.4
+ * Requires PHP:      7.2
  * Tested up to:      6.9.4
  * Requires Plugins:  elementor
+ * Update URI:        https://github.com/frankwrk/synq-animated-backgrounds
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  */
@@ -18,12 +19,28 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('SYNQ_AB_PLUGIN_VERSION', '0.3.0');
+define('SYNQ_AB_PLUGIN_VERSION', '0.3.2');
+define('SYNQ_AB_PLUGIN_FILE', __FILE__);
 define('SYNQ_AB_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('SYNQ_AB_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('SYNQ_AB_MIN_WP_VERSION', '6.6');
-define('SYNQ_AB_MIN_PHP_VERSION', '7.4');
-define('SYNQ_AB_MIN_ELEMENTOR_VERSION', '4.0.0');
+define('SYNQ_AB_MIN_WP_VERSION', '6.4');
+define('SYNQ_AB_MIN_PHP_VERSION', '7.2');
+define('SYNQ_AB_MIN_ELEMENTOR_VERSION', '3.24.0');
+define('SYNQ_AB_GITHUB_REPOSITORY', 'frankwrk/synq-animated-backgrounds');
+
+/**
+ * Normalize plugin dependency versions for minimum checks.
+ *
+ * Strips prerelease/build suffixes so values like "4.0.0-dev4" are treated as
+ * "4.0.0" when evaluating minimum supported versions.
+ */
+function synq_ab_normalize_dependency_version(string $version): string {
+    if (preg_match('/^\d+(?:\.\d+){0,2}/', $version, $matches)) {
+        return $matches[0];
+    }
+
+    return $version;
+}
 
 /**
  * Return an array of compatibility issues.
@@ -55,7 +72,11 @@ function synq_ab_get_compatibility_issues(): array {
 
     if (! class_exists('\Elementor\Plugin') && ! defined('ELEMENTOR_VERSION')) {
         $issues[] = __('SYNQ Animated Backgrounds requires Elementor to be active.', 'synq-animated-backgrounds');
-    } elseif (defined('ELEMENTOR_VERSION') && version_compare(ELEMENTOR_VERSION, SYNQ_AB_MIN_ELEMENTOR_VERSION, '<')) {
+    } elseif (defined('ELEMENTOR_VERSION') && version_compare(
+        synq_ab_normalize_dependency_version(ELEMENTOR_VERSION),
+        synq_ab_normalize_dependency_version(SYNQ_AB_MIN_ELEMENTOR_VERSION),
+        '<'
+    )) {
         $issues[] = sprintf(
             /* translators: 1: current version, 2: required version */
             __('SYNQ Animated Backgrounds requires Elementor %2$s or higher. Current Elementor version: %1$s.', 'synq-animated-backgrounds'),
@@ -103,6 +124,7 @@ add_action('plugins_loaded', function () {
     }
 
     require_once SYNQ_AB_PLUGIN_PATH . 'includes/class-provider-interface.php';
+    require_once SYNQ_AB_PLUGIN_PATH . 'includes/class-github-updater.php';
     require_once SYNQ_AB_PLUGIN_PATH . 'includes/providers/class-provider-vanta-topology.php';
     require_once SYNQ_AB_PLUGIN_PATH . 'includes/providers/class-provider-vanta-trunk.php';
     require_once SYNQ_AB_PLUGIN_PATH . 'includes/class-plugin.php';
@@ -115,5 +137,6 @@ add_action('plugins_loaded', function () {
         );
     });
 
+    new SYNQ_AB_GitHub_Updater(SYNQ_AB_PLUGIN_FILE, SYNQ_AB_PLUGIN_VERSION);
     new SYNQ_Animated_Backgrounds_Plugin();
 });
