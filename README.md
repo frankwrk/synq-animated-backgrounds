@@ -2,7 +2,7 @@
 
 A WordPress plugin that adds animated background controls to **Elementor Container** widgets.
 
-Current version: `0.3.3`
+Current version: `0.3.4`
 Bundled providers: **Vanta Topology** and **Vanta Trunk**
 
 ## Overview
