@@ -220,6 +220,25 @@ Release recommendations:
 2. Prefer uploading a release asset zip named `synq-animated-backgrounds.zip` with plugin files at the zip root.
 3. If only source zipball is present, updater will attempt directory normalization automatically.
 
+Automated release helper:
+
+- Script: `scripts/release.sh`
+- Runs: version bump (`synq-animated-backgrounds.php` + `README.md`) -> commit/tag -> zip build -> push -> GitHub release
+
+Example:
+
+```bash
+scripts/release.sh 0.3.3
+```
+
+Options:
+
+- `--notes "text"`: set release notes text
+- `--notes-file path/to/notes.md`: read release notes from file
+- `--no-push`: prepare commit/tag/zip without pushing
+- `--no-release`: prepare commit/tag/zip without creating GitHub release
+- `--allow-non-main`: allow running outside `main`
+
 ## Extension Guide (Adding Providers)
 
 1. Add provider class in `includes/providers/` implementing `SYNQ_Bg_Provider_Interface`.
