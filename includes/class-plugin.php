@@ -11,13 +11,30 @@ class SYNQ_Animated_Backgrounds_Plugin {
      */
     protected $providers = [];
 
-    protected $core_scripts_registered = false;
-    protected $core_scripts_enqueued   = false;
+    /**
+     * Prevent duplicate registration.
+     *
+     * @var bool
+     */
+    protected $core_assets_registered = false;
+
+    /**
+     * Prevent duplicate enqueueing for core assets.
+     *
+     * @var bool
+     */
+    protected $core_assets_enqueued = false;
+
+    /**
+     * Track provider asset handles already enqueued.
+     *
+     * @var bool[]
+     */
+    protected $provider_assets_enqueued = [];
 
     public function __construct() {
         $this->register_providers();
 
-        // Elementor controls
         add_action(
             'elementor/element/container/section_layout/after_section_end',
             [ $this, 'register_container_controls' ],
@@ -25,22 +42,21 @@ class SYNQ_Animated_Backgrounds_Plugin {
             2
         );
 
-        // Frontend: inject data attributes for containers
         add_action(
             'elementor/frontend/before_render',
             [ $this, 'on_element_before_render' ]
         );
 
-        // Register core scripts / styles
         add_action(
             'wp_enqueue_scripts',
-            [ $this, 'register_core_assets' ]
+            [ $this, 'register_core_assets' ],
+            5
         );
 
-        // Ensure assets are enqueued on Elementor frontend pages
         add_action(
-            'elementor/frontend/after_enqueue_scripts',
-            [ $this, 'force_enqueue_assets' ]
+            'wp_enqueue_scripts',
+            [ $this, 'maybe_enqueue_assets_from_document' ],
+            20
         );
     }
 
@@ -70,11 +86,10 @@ class SYNQ_Animated_Backgrounds_Plugin {
      * Register core JS/CSS assets.
      */
     public function register_core_assets(): void {
-        if ( $this->core_scripts_registered ) {
+        if ( $this->core_assets_registered ) {
             return;
         }
 
-        // Core JS
         wp_register_script(
             'synq-ab-core',
             SYNQ_AB_PLUGIN_URL . 'assets/js/core.js',
@@ -83,7 +98,6 @@ class SYNQ_Animated_Backgrounds_Plugin {
             true
         );
 
-        // Optional CSS stub
         wp_register_style(
             'synq-ab-frontend',
             SYNQ_AB_PLUGIN_URL . 'assets/css/frontend.css',
@@ -91,36 +105,134 @@ class SYNQ_Animated_Backgrounds_Plugin {
             SYNQ_AB_PLUGIN_VERSION
         );
 
-        $this->core_scripts_registered = true;
+        $this->core_assets_registered = true;
     }
 
     /**
      * Enqueue core JS/CSS assets.
      */
     protected function enqueue_core_assets(): void {
-        if ( $this->core_scripts_enqueued ) {
+        if ( $this->core_assets_enqueued ) {
             return;
         }
 
         wp_enqueue_script( 'synq-ab-core' );
         wp_enqueue_style( 'synq-ab-frontend' );
 
-        $this->core_scripts_enqueued = true;
+        $this->core_assets_enqueued = true;
     }
 
     /**
-     * Ensure core and provider assets are enqueued on Elementor frontend pages.
-     * This avoids race conditions with Elementor performance features / caching.
+     * Enqueue a single provider's frontend assets once.
      */
-    public function force_enqueue_assets(): void {
-        // Make sure core assets are registered and enqueued.
+    protected function enqueue_provider_assets( string $type ): void {
+        if ( ! isset( $this->providers[ $type ] ) ) {
+            return;
+        }
+
+        if ( isset( $this->provider_assets_enqueued[ $type ] ) ) {
+            return;
+        }
+
+        $this->providers[ $type ]->enqueue_scripts();
+        $this->provider_assets_enqueued[ $type ] = true;
+    }
+
+    /**
+     * Attempt to detect required providers from current post's Elementor data.
+     */
+    public function maybe_enqueue_assets_from_document(): void {
+        if ( is_admin() ) {
+            return;
+        }
+
+        $post_id = get_queried_object_id();
+        if ( empty( $post_id ) ) {
+            return;
+        }
+
+        $provider_types = $this->get_provider_types_from_post( (int) $post_id );
+        if ( empty( $provider_types ) ) {
+            return;
+        }
+
         $this->register_core_assets();
         $this->enqueue_core_assets();
 
-        // For v0.1, enqueue all providers on Elementor pages.
-        foreach ( $this->providers as $provider ) {
-            $provider->enqueue_scripts();
+        foreach ( $provider_types as $provider_type ) {
+            $this->enqueue_provider_assets( $provider_type );
         }
+    }
+
+    /**
+     * Parse Elementor JSON and collect provider types referenced in this post.
+     *
+     * @return string[]
+     */
+    protected function get_provider_types_from_post( int $post_id ): array {
+        $raw_data = get_post_meta( $post_id, '_elementor_data', true );
+        if ( empty( $raw_data ) || ! is_string( $raw_data ) ) {
+            return [];
+        }
+
+        $elementor_data = json_decode( $raw_data, true );
+        if ( ! is_array( $elementor_data ) ) {
+            return [];
+        }
+
+        $provider_types = [];
+        $this->collect_provider_types_from_elements( $elementor_data, $provider_types );
+
+        return array_values( array_unique( $provider_types ) );
+    }
+
+    /**
+     * Recursively collect enabled provider types from element arrays.
+     *
+     * @param array   $elements       Elementor node array.
+     * @param string[] $provider_types Output list of provider type keys.
+     */
+    protected function collect_provider_types_from_elements( array $elements, array &$provider_types ): void {
+        foreach ( $elements as $element ) {
+            if ( ! is_array( $element ) ) {
+                continue;
+            }
+
+            $settings = isset( $element['settings'] ) && is_array( $element['settings'] )
+                ? $element['settings']
+                : [];
+
+            $is_enabled = ! empty( $settings['synq_bg_anim_enable'] ) && 'yes' === $settings['synq_bg_anim_enable'];
+            if ( $is_enabled ) {
+                $type = isset( $settings['synq_bg_anim_type'] )
+                    ? sanitize_key( (string) $settings['synq_bg_anim_type'] )
+                    : '';
+
+                if ( $type && isset( $this->providers[ $type ] ) ) {
+                    $provider_types[] = $type;
+                }
+            }
+
+            if ( ! empty( $element['elements'] ) && is_array( $element['elements'] ) ) {
+                $this->collect_provider_types_from_elements( $element['elements'], $provider_types );
+            }
+        }
+    }
+
+    /**
+     * Clamp a slider value from Elementor settings.
+     */
+    protected function get_clamped_slider_value( array $settings, string $key, float $default, float $min, float $max ): float {
+        if ( empty( $settings[ $key ]['size'] ) || ! is_numeric( $settings[ $key ]['size'] ) ) {
+            return $default;
+        }
+
+        $value = (float) $settings[ $key ]['size'];
+        if ( ! is_finite( $value ) ) {
+            return $default;
+        }
+
+        return max( $min, min( $max, $value ) );
     }
 
     /**
@@ -160,7 +272,6 @@ class SYNQ_Animated_Backgrounds_Plugin {
             ]
         );
 
-        // Shared options
         $element->add_control(
             'synq_bg_anim_disable_mobile',
             [
@@ -220,7 +331,6 @@ class SYNQ_Animated_Backgrounds_Plugin {
             ]
         );
 
-        // Provider-specific controls
         foreach ( $this->providers as $provider ) {
             $provider->register_controls( $element );
         }
@@ -234,7 +344,6 @@ class SYNQ_Animated_Backgrounds_Plugin {
      * @param \Elementor\Element_Base $element
      */
     public function on_element_before_render( $element ): void {
-        // Only target Elementor Containers (for now).
         if ( 'container' !== $element->get_name() ) {
             return;
         }
@@ -245,23 +354,24 @@ class SYNQ_Animated_Backgrounds_Plugin {
             return;
         }
 
-        $type = $settings['synq_bg_anim_type'] ?? '';
+        $type = isset( $settings['synq_bg_anim_type'] )
+            ? sanitize_key( (string) $settings['synq_bg_anim_type'] )
+            : '';
 
         if ( ! $type || ! isset( $this->providers[ $type ] ) ) {
             return;
         }
 
-        $provider = $this->providers[ $type ];
+        // Fallback for theme-builder or dynamic document contexts where post-level
+        // detection may not have happened before render.
+        $this->register_core_assets();
+        $this->enqueue_core_assets();
+        $this->enqueue_provider_assets( $type );
 
+        $provider       = $this->providers[ $type ];
         $disable_mobile = ! empty( $settings['synq_bg_anim_disable_mobile'] ) && 'yes' === $settings['synq_bg_anim_disable_mobile'];
-
-        $intensity = ! empty( $settings['synq_bg_anim_intensity']['size'] )
-            ? (float) $settings['synq_bg_anim_intensity']['size']
-            : 0.7;
-
-        $speed = ! empty( $settings['synq_bg_anim_speed']['size'] )
-            ? (float) $settings['synq_bg_anim_speed']['size']
-            : 1.0;
+        $intensity      = $this->get_clamped_slider_value( $settings, 'synq_bg_anim_intensity', 0.7, 0.0, 1.0 );
+        $speed          = $this->get_clamped_slider_value( $settings, 'synq_bg_anim_speed', 1.0, 0.5, 2.0 );
 
         $base_config = [
             'type'          => $type,
@@ -270,18 +380,21 @@ class SYNQ_Animated_Backgrounds_Plugin {
             'speed'         => $speed,
         ];
 
-        $config = $provider->normalize_config( $settings, $base_config );
+        $config      = $provider->normalize_config( $settings, $base_config );
+        $config_json = wp_json_encode( $config );
 
-        // Attach data attributes
+        if ( false === $config_json ) {
+            return;
+        }
+
         $element->add_render_attribute(
             '_wrapper',
             [
-                'data-bg-anim'        => esc_attr( $type ),
-                'data-bg-anim-config' => esc_attr( wp_json_encode( $config ) ),
+                'data-bg-anim'        => $type,
+                'data-bg-anim-config' => $config_json,
             ]
         );
 
-        // For stacking context / fallback, add a helper class.
         $element->add_render_attribute(
             '_wrapper',
             'class',

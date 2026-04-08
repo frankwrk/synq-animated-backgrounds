@@ -2,32 +2,117 @@
 
 /**
  * Plugin Name:       SYNQ Animated Backgrounds for Elementor
- * Description:       Generic animated backgrounds for Elementor Containers (v0.1 ships with Vanta Topology).
- * Version:           0.1.0
+ * Description:       Generic animated backgrounds for Elementor Containers (v0.2 ships with Vanta Topology hardening improvements).
+ * Version:           0.2.0
  * Author:            SYNQ Group
  * Text Domain:       synq-animated-backgrounds
+ * Requires at least: 6.6
+ * Requires PHP:      7.4
+ * Tested up to:      6.9.4
+ * Requires Plugins:  elementor
+ * License:           GPL-2.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  */
 
 if (! defined('ABSPATH')) {
     exit;
 }
 
-define('SYNQ_AB_PLUGIN_VERSION', '0.1.0');
+define('SYNQ_AB_PLUGIN_VERSION', '0.2.0');
 define('SYNQ_AB_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('SYNQ_AB_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('SYNQ_AB_MIN_WP_VERSION', '6.6');
+define('SYNQ_AB_MIN_PHP_VERSION', '7.4');
+define('SYNQ_AB_MIN_ELEMENTOR_VERSION', '4.0.0');
 
-// Includes
-require_once SYNQ_AB_PLUGIN_PATH . 'includes/class-provider-interface.php';
-require_once SYNQ_AB_PLUGIN_PATH . 'includes/providers/class-provider-vanta-topology.php';
-require_once SYNQ_AB_PLUGIN_PATH . 'includes/class-plugin.php';
+/**
+ * Return an array of compatibility issues.
+ *
+ * @return string[]
+ */
+function synq_ab_get_compatibility_issues(): array {
+    global $wp_version;
 
-// Bootstrap
-add_action('plugins_loaded', function () {
-    // Optional: ensure Elementor exists
-    if (! did_action('elementor/loaded')) {
-        // Elementor not active, bail silently
+    $issues = [];
+
+    if (version_compare(PHP_VERSION, SYNQ_AB_MIN_PHP_VERSION, '<')) {
+        $issues[] = sprintf(
+            /* translators: 1: current version, 2: required version */
+            __('SYNQ Animated Backgrounds requires PHP %2$s or higher. Current PHP version: %1$s.', 'synq-animated-backgrounds'),
+            PHP_VERSION,
+            SYNQ_AB_MIN_PHP_VERSION
+        );
+    }
+
+    if (version_compare($wp_version, SYNQ_AB_MIN_WP_VERSION, '<')) {
+        $issues[] = sprintf(
+            /* translators: 1: current version, 2: required version */
+            __('SYNQ Animated Backgrounds requires WordPress %2$s or higher. Current WordPress version: %1$s.', 'synq-animated-backgrounds'),
+            $wp_version,
+            SYNQ_AB_MIN_WP_VERSION
+        );
+    }
+
+    if (! class_exists('\Elementor\Plugin') && ! defined('ELEMENTOR_VERSION')) {
+        $issues[] = __('SYNQ Animated Backgrounds requires Elementor to be active.', 'synq-animated-backgrounds');
+    } elseif (defined('ELEMENTOR_VERSION') && version_compare(ELEMENTOR_VERSION, SYNQ_AB_MIN_ELEMENTOR_VERSION, '<')) {
+        $issues[] = sprintf(
+            /* translators: 1: current version, 2: required version */
+            __('SYNQ Animated Backgrounds requires Elementor %2$s or higher. Current Elementor version: %1$s.', 'synq-animated-backgrounds'),
+            ELEMENTOR_VERSION,
+            SYNQ_AB_MIN_ELEMENTOR_VERSION
+        );
+    }
+
+    return $issues;
+}
+
+/**
+ * Render compatibility notices in wp-admin.
+ *
+ * @param string[] $issues Validation errors.
+ */
+function synq_ab_render_admin_notice(array $issues): void {
+    if (! current_user_can('activate_plugins')) {
         return;
     }
+
+    echo '<div class="notice notice-error"><p><strong>' .
+        esc_html__('SYNQ Animated Backgrounds was not loaded due to compatibility requirements:', 'synq-animated-backgrounds') .
+        '</strong></p><ul style="margin-left:1.4em;list-style:disc;">';
+
+    foreach ($issues as $issue) {
+        echo '<li>' . esc_html($issue) . '</li>';
+    }
+
+    echo '</ul></div>';
+}
+
+/**
+ * Plugin bootstrap.
+ */
+add_action('plugins_loaded', function () {
+    $issues = synq_ab_get_compatibility_issues();
+
+    if (! empty($issues)) {
+        add_action('admin_notices', function () use ($issues) {
+            synq_ab_render_admin_notice($issues);
+        });
+
+        return;
+    }
+
+    require_once SYNQ_AB_PLUGIN_PATH . 'includes/class-provider-interface.php';
+    require_once SYNQ_AB_PLUGIN_PATH . 'includes/providers/class-provider-vanta-topology.php';
+    require_once SYNQ_AB_PLUGIN_PATH . 'includes/class-plugin.php';
+
+    add_action('init', function () {
+        load_plugin_textdomain(
+            'synq-animated-backgrounds',
+            false,
+            dirname(plugin_basename(__FILE__)) . '/languages'
+        );
+    });
 
     new SYNQ_Animated_Backgrounds_Plugin();
 });

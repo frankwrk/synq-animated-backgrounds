@@ -1,11 +1,16 @@
-/* Basic stacking context helper for animated backgrounds */
-
 .synq-bg-anim-wrapper {
   position: relative;
   overflow: hidden;
 }
 
-.synq-bg-anim-wrapper canvas {
+.synq-bg-anim-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.synq-bg-anim-layer canvas {
   position: absolute !important;
   inset: 0;
   width: 100% !important;
@@ -13,7 +18,7 @@
   z-index: 0 !important;
 }
 
-.synq-bg-anim-wrapper > * {
+.synq-bg-anim-content-layer {
   position: relative;
   z-index: 1;
 }

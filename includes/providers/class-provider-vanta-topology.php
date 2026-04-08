@@ -1,31 +1,42 @@
 <?php
 
-if (! defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class SYNQ_Bg_Provider_Vanta_Topology implements SYNQ_Bg_Provider_Interface
-{
+class SYNQ_Bg_Provider_Vanta_Topology implements SYNQ_Bg_Provider_Interface {
 
-    public function get_type(): string
-    {
+    /**
+     * Clamp a numeric slider value.
+     */
+    protected function get_clamped_slider_value( array $settings, string $key, float $default, float $min, float $max ): float {
+        if ( empty( $settings[ $key ]['size'] ) || ! is_numeric( $settings[ $key ]['size'] ) ) {
+            return $default;
+        }
+
+        $value = (float) $settings[ $key ]['size'];
+        if ( ! is_finite( $value ) ) {
+            return $default;
+        }
+
+        return max( $min, min( $max, $value ) );
+    }
+
+    public function get_type(): string {
         return 'vanta_topology';
     }
 
-    public function get_label(): string
-    {
-        return __('Vanta – Topology', 'synq-animated-backgrounds');
+    public function get_label(): string {
+        return __( 'Vanta – Topology', 'synq-animated-backgrounds' );
     }
 
-    public function register_controls($element): void
-    {
+    public function register_controls( $element ): void {
         $type = $this->get_type();
 
-        // Line color
         $element->add_control(
             "synq_bg_{$type}_line_color",
             [
-                'label'     => __('Line Color', 'synq-animated-backgrounds'),
+                'label'     => __( 'Line Color', 'synq-animated-backgrounds' ),
                 'type'      => \Elementor\Controls_Manager::COLOR,
                 'default'   => '#2a2a2a',
                 'condition' => [
@@ -35,11 +46,10 @@ class SYNQ_Bg_Provider_Vanta_Topology implements SYNQ_Bg_Provider_Interface
             ]
         );
 
-        // Background color
         $element->add_control(
             "synq_bg_{$type}_bg_color",
             [
-                'label'     => __('Background Color', 'synq-animated-backgrounds'),
+                'label'     => __( 'Background Color', 'synq-animated-backgrounds' ),
                 'type'      => \Elementor\Controls_Manager::COLOR,
                 'default'   => '#000000',
                 'condition' => [
@@ -49,13 +59,12 @@ class SYNQ_Bg_Provider_Vanta_Topology implements SYNQ_Bg_Provider_Interface
             ]
         );
 
-        // Scale
         $element->add_control(
             "synq_bg_{$type}_scale",
             [
-                'label'      => __('Scale', 'synq-animated-backgrounds'),
+                'label'      => __( 'Scale', 'synq-animated-backgrounds' ),
                 'type'       => \Elementor\Controls_Manager::SLIDER,
-                'size_units' => [''],
+                'size_units' => [ '' ],
                 'range'      => [
                     '' => [
                         'min'  => 0.5,
@@ -73,13 +82,12 @@ class SYNQ_Bg_Provider_Vanta_Topology implements SYNQ_Bg_Provider_Interface
             ]
         );
 
-        // Points (density)
         $element->add_control(
             "synq_bg_{$type}_points",
             [
-                'label'      => __('Points (Density)', 'synq-animated-backgrounds'),
+                'label'      => __( 'Points (Density)', 'synq-animated-backgrounds' ),
                 'type'       => \Elementor\Controls_Manager::SLIDER,
-                'size_units' => [''],
+                'size_units' => [ '' ],
                 'range'      => [
                     '' => [
                         'min'  => 5,
@@ -97,13 +105,12 @@ class SYNQ_Bg_Provider_Vanta_Topology implements SYNQ_Bg_Provider_Interface
             ]
         );
 
-        // Spacing
         $element->add_control(
             "synq_bg_{$type}_spacing",
             [
-                'label'      => __('Spacing', 'synq-animated-backgrounds'),
+                'label'      => __( 'Spacing', 'synq-animated-backgrounds' ),
                 'type'       => \Elementor\Controls_Manager::SLIDER,
-                'size_units' => [''],
+                'size_units' => [ '' ],
                 'range'      => [
                     '' => [
                         'min'  => 5,
@@ -123,73 +130,93 @@ class SYNQ_Bg_Provider_Vanta_Topology implements SYNQ_Bg_Provider_Interface
     }
 
     public function normalize_config( array $settings, array $base_config ): array {
-    	$type = $this->get_type();
+        $type = $this->get_type();
 
-    	$line_color = ! empty( $settings[ "synq_bg_{$type}_line_color" ] )
-        	? $settings[ "synq_bg_{$type}_line_color" ]
-        	: '#2a2a2a';
+        $line_color = isset( $settings[ "synq_bg_{$type}_line_color" ] )
+            ? sanitize_hex_color( (string) $settings[ "synq_bg_{$type}_line_color" ] )
+            : '';
+        if ( empty( $line_color ) ) {
+            $line_color = '#2a2a2a';
+        }
 
-    	$bg_color = ! empty( $settings[ "synq_bg_{$type}_bg_color" ] )
-        	? $settings[ "synq_bg_{$type}_bg_color" ]
-        	: '#000000';
+        $bg_color = isset( $settings[ "synq_bg_{$type}_bg_color" ] )
+            ? sanitize_hex_color( (string) $settings[ "synq_bg_{$type}_bg_color" ] )
+            : '';
+        if ( empty( $bg_color ) ) {
+            $bg_color = '#000000';
+        }
 
-    	$scale = ! empty( $settings[ "synq_bg_{$type}_scale" ]['size'] )
-        	? (float) $settings[ "synq_bg_{$type}_scale" ]['size']
-        	: 1.0;
+        $scale   = $this->get_clamped_slider_value( $settings, "synq_bg_{$type}_scale", 1.0, 0.5, 2.0 );
+        $points  = $this->get_clamped_slider_value( $settings, "synq_bg_{$type}_points", 10.0, 5.0, 20.0 );
+        $spacing = $this->get_clamped_slider_value( $settings, "synq_bg_{$type}_spacing", 15.0, 5.0, 50.0 );
 
-    	$points = ! empty( $settings[ "synq_bg_{$type}_points" ]['size'] )
-        	? (float) $settings[ "synq_bg_{$type}_points" ]['size']
-        	: 10.0;
+        $base_config['provider'] = [
+            'lineColor' => $line_color,
+            'bgColor'   => $bg_color,
+            'scale'     => $scale,
+            'points'    => $points,
+            'spacing'   => $spacing,
+        ];
 
-    	$spacing = ! empty( $settings[ "synq_bg_{$type}_spacing" ]['size'] )
-        	? (float) $settings[ "synq_bg_{$type}_spacing" ]['size']
-        	: 15.0;
+        return $base_config;
+    }
 
-    	$base_config['provider'] = [
-        	'lineColor' => $line_color,
-        	'bgColor'   => $bg_color,
-        	'scale'     => $scale,
-        	'points'    => $points,
-        	'spacing'   => $spacing,
-    	];
+    public function enqueue_scripts(): void {
+        $urls = [
+            'three'          => 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js',
+            'p5'             => 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js',
+            'vanta_topology' => 'https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.topology.min.js',
+        ];
 
-    	return $base_config;
-	}
+        /**
+         * Filter CDN/local script URLs for the Vanta Topology provider.
+         *
+         * @param array $urls {
+         *     @type string $three          URL for three.js.
+         *     @type string $p5             URL for p5.js.
+         *     @type string $vanta_topology URL for vanta topology build.
+         * }
+         */
+        $urls = wp_parse_args(
+            apply_filters( 'synq_ab_vanta_topology_script_urls', $urls ),
+            $urls
+        );
 
-    public function enqueue_scripts(): void
-    {
-        // External dependencies for Vanta Topology
-        wp_enqueue_script(
+        wp_register_script(
             'synq-ab-threejs',
-            'https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js',
+            $urls['three'],
             [],
-            null,
+            'r121',
             true
         );
 
-        wp_enqueue_script(
+        wp_register_script(
             'synq-ab-p5js',
-            'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js',
+            $urls['p5'],
             [],
-            null,
+            '1.1.9',
             true
         );
 
-        wp_enqueue_script(
+        wp_register_script(
             'synq-ab-vanta-topology',
-            'https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js',
-            ['synq-ab-threejs', 'synq-ab-p5js'],
-            null,
+            $urls['vanta_topology'],
+            [ 'synq-ab-threejs', 'synq-ab-p5js' ],
+            '0.5.24',
             true
         );
 
-        // Provider-side JS that plugs into the core registry
-        wp_enqueue_script(
+        wp_register_script(
             'synq-ab-provider-vanta-topology',
             SYNQ_AB_PLUGIN_URL . 'assets/js/provider-vanta-topology.js',
-            ['synq-ab-core', 'synq-ab-vanta-topology'],
+            [ 'synq-ab-core', 'synq-ab-vanta-topology' ],
             SYNQ_AB_PLUGIN_VERSION,
             true
         );
+
+        wp_enqueue_script( 'synq-ab-threejs' );
+        wp_enqueue_script( 'synq-ab-p5js' );
+        wp_enqueue_script( 'synq-ab-vanta-topology' );
+        wp_enqueue_script( 'synq-ab-provider-vanta-topology' );
     }
 }
