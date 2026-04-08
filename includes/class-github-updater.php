@@ -128,6 +128,8 @@ class SYNQ_AB_GitHub_Updater {
      * @return array<string,string>|null
      */
     protected function get_latest_release( $force_refresh = false ) {
+        $force_refresh = $force_refresh || $this->should_bypass_release_cache();
+
         if ( ! $force_refresh ) {
             $cached = get_transient( $this->cache_key );
             if ( is_array( $cached ) ) {
@@ -206,6 +208,23 @@ class SYNQ_AB_GitHub_Updater {
         set_transient( $this->cache_key, $release, $this->cache_ttl );
 
         return $release;
+    }
+
+    /**
+     * Bypass updater cache when a manual force-check is requested in wp-admin.
+     *
+     * @return bool
+     */
+    protected function should_bypass_release_cache() {
+        if ( ! is_admin() ) {
+            return false;
+        }
+
+        if ( empty( $_GET['force-check'] ) ) {
+            return false;
+        }
+
+        return '1' === (string) $_GET['force-check'];
     }
 
     /**

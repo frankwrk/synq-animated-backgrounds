@@ -142,9 +142,65 @@ fi
 
 echo "Bumping version: $CURRENT_VERSION -> $NEW_VERSION"
 
-perl -i -pe "s/^(\\s*\\* Version:\\s+).*/\$1$NEW_VERSION/" "$PLUGIN_FILE"
-perl -i -pe "s/^define\\('SYNQ_AB_PLUGIN_VERSION',\\s*'[^']+'\\);/define('SYNQ_AB_PLUGIN_VERSION', '$NEW_VERSION');/" "$PLUGIN_FILE"
-perl -i -pe 's/^Current version: `[^`]+`$/Current version: `'"$NEW_VERSION"'`/' "$README_FILE"
+php -r '
+$pluginFile = $argv[1];
+$newVersion = $argv[2];
+$content = file_get_contents($pluginFile);
+if ($content === false) {
+    fwrite(STDERR, "Failed to read plugin file\n");
+    exit(1);
+}
+$countHeader = 0;
+$countDefine = 0;
+$content = preg_replace(
+    "/^\\s*\\* Version:\\s+.*$/m",
+    " * Version:           " . $newVersion,
+    $content,
+    1,
+    $countHeader
+);
+$content = preg_replace(
+    "/^define\\x28\\x27SYNQ_AB_PLUGIN_VERSION\\x27,\\s*\\x27[^\\x27]+\\x27\\x29;$/m",
+    "define('\''SYNQ_AB_PLUGIN_VERSION'\'', '\''" . $newVersion . "'\'');",
+    $content,
+    1,
+    $countDefine
+);
+if ($countHeader !== 1 || $countDefine !== 1) {
+    fwrite(STDERR, "Failed to update plugin version markers\n");
+    exit(1);
+}
+if (file_put_contents($pluginFile, $content) === false) {
+    fwrite(STDERR, "Failed to write plugin file\n");
+    exit(1);
+}
+' "$PLUGIN_FILE" "$NEW_VERSION"
+
+php -r '
+$readmeFile = $argv[1];
+$newVersion = $argv[2];
+$content = file_get_contents($readmeFile);
+if ($content === false) {
+    fwrite(STDERR, "Failed to read README\n");
+    exit(1);
+}
+$count = 0;
+$content = preg_replace(
+    "/^Current version: `[^`]+`$/m",
+    "Current version: `" . $newVersion . "`",
+    $content,
+    1,
+    $count
+);
+if ($count !== 1) {
+    fwrite(STDERR, "Failed to update README current version line\n");
+    exit(1);
+}
+if (file_put_contents($readmeFile, $content) === false) {
+    fwrite(STDERR, "Failed to write README\n");
+    exit(1);
+}
+' "$README_FILE" "$NEW_VERSION"
 
 php -l "$PLUGIN_FILE" >/dev/null
 

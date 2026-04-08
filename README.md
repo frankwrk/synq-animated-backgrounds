@@ -219,6 +219,11 @@ Optional filters:
 - `synq_ab_github_token` — set a token for private repos.
 - `synq_ab_github_cache_ttl` — override release metadata cache TTL (seconds, min 300).
 
+Cache behavior:
+
+- Release metadata is cached using transients for 1 hour by default.
+- Manual WordPress update checks with `force-check=1` now bypass this plugin cache automatically to fetch the latest GitHub release immediately.
+
 Release recommendations:
 
 1. Publish a GitHub Release with a semver tag (for example `v0.3.2`).
@@ -289,6 +294,10 @@ The following improvements were implemented for stability/performance before add
 2. Added custom plugin metadata `Update URI` for non-WordPress.org updates.
 3. Added safe source-directory normalization during update install to avoid folder mismatch breakage.
 4. Added optional private-repo auth support via filter.
+
+## Updater Cache Refresh Fix in v0.3.4
+
+1. `force-check=1` requests from WordPress admin now bypass cached GitHub release metadata to prevent stale update results after publishing a new release.
 
 ## File Map
 
